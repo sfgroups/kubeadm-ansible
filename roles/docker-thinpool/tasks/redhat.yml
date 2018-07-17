@@ -1,0 +1,26 @@
+---
+- set_fact:
+    storage_driver: devicemapper
+  when: storage_driver is not defined
+
+# Configure devicemapper if EL < 7.2 or overlay not defined
+- include: lvm-dm.yml
+  when: ansible_distribution_version < "7.2" or storage_driver != "overlay"
+
+- name: "Ensure /etc/docker dir exists"
+  file:
+    path: /etc/docker
+    state: directory
+
+- name: "Configure Docker engine"
+  template: 
+    src: daemon.json.j2
+    dest: /etc/docker/daemon.json
+    force: no # don't overwrite if exists
+    owner: root
+    group: root
+
+- name: "Set MountFlags=slave"
+  copy:
+    src: mount_flags.conf
+    dest: /etc/systemd/system/docker.service.d/

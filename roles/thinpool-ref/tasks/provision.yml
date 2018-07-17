@@ -1,0 +1,82 @@
+---
+- name: install required packages (lvm2...)
+  become: true
+  become_user: root
+  with_items:
+    - lvm2
+  package:
+    name: '{{item}}'
+    state: latest
+
+- name: make partition layout dir
+  become: true
+  become_user: root
+  file: >-
+    path={{docker_provision_thinpool_partition_layout_dest_dir}}
+    state=directory
+    mode=0755
+
+- name: inject partition layout if provided
+  when: docker_provision_thinpool_partition_layout is defined
+  become: true
+  become_user: root
+  copy: >-
+    src={{docker_provision_thinpool_partition_layout}}
+    dest={{docker_provision_thinpool_partition_layout_dest}}
+    mode=0644
+
+- name: inject partition layout based on template
+  when: docker_provision_thinpool_partition_layout is not defined
+  become: true
+  become_user: root
+  template: >
+    src=docker.layout.j2
+    dest={{docker_provision_thinpool_partition_layout_dest}}
+    mode=0644
+
+- name: initiate the device with partition layout
+  become: true
+  become_user: root
+  shell: sfdisk {{docker_provision_thinpool_device_name}} < {{docker_provision_thinpool_partition_layout_dest}}
+
+- name: create logical volume group
+  become: true
+  become_user: root
+  lvg:
+    vg: '{{docker_provision_thinpool_volume_group_name}}'
+    pvs: '{{docker_provision_thinpool_partition_name}}'
+    state: present
+
+- name: create the logical volume pool
+  become: true
+  become_user: root
+  with_items: '{{docker_provision_thinpool_logical_volumes}}'
+  lvol:
+    vg: '{{item.volume_group_name}}'
+    lv: '{{item.logical_volume_name}}'
+    size: '{{item.logical_volume_size}}'
+    opts: --wipesignatures y
+
+- name: convert the pool to a thin pool
+  become: true
+  become_user: root
+  command: >-
+    lvconvert -y --zero n -c {{docker_provision_thinpool_chuncksize_kb}}K
+      --thinpool {{docker_provision_thinpool_volume_group_name}}/{{docker_provision_thinpool_logical_volume_name}}
+      --poolmetadata {{docker_provision_thinpool_volume_group_name}}/{{docker_provision_thinpool_logical_volume_meta}}
+
+- name: add lvm profile
+  become: true
+  become_user: root
+  template: >
+    src=lvm-metadata.profile.j2
+    dest=/etc/lvm/profile/{{docker_provision_thinpool_metadata_profile}}.profile
+    mode=0644
+
+- name: apply lvm profile to logical volume
+  become: true
+  become_user: root
+  command: >- 
+    lvchange 
+      --metadataprofile {{docker_provision_thinpool_metadata_profile}}
+      {{docker_provision_thinpool_volume_group_name}}/{{docker_provision_thinpool_logical_volume_name}}

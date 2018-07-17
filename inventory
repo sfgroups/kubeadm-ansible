@@ -1,0 +1,9 @@
+[master]
+192.168.15.200
+
+[node]
+192.168.15.201
+
+[cluster:children]
+master
+node

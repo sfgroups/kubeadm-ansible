@@ -1,0 +1,52 @@
+---
+
+# Include devicemapper parameters
+- include_vars: "../vars/el-devicemapper.yml"
+
+- set_fact:
+    storage_driver: "devicemapper"
+
+- name: "devicemapper: Install LVM2"
+  yum:
+    name: lvm2
+    state: present
+
+- name: "devicemapper: Create volume group"
+  lvg:
+    vg: docker
+    pvs: "{{ dm_device }}"
+    state: present
+
+- name: "devicemapper: Create logical volume"
+  lvol:
+    lv: thinpool
+    vg: docker
+    size: 95%VG
+    opts: "--thin"
+    state: present
+
+- name: "devicemapper: Add LVM Profile"
+  copy:
+    src: "docker-thinpool.profile"
+    dest: /etc/lvm/profile
+    owner: root
+    group: root
+
+- name: "devicemapper: Apply LVM Profile"
+  command: lvchange --metadataprofile docker-thinpool docker/thinpool
+
+- name: check docker.bk direcoty
+  stat: 
+    path: /var/lib/docker.bk
+  register: bk_stat
+
+- name: Move lib docker to docker.bk
+  command: mv /var/lib/docker /var/lib/docker.bk
+  when: not bk_stat.stat.exists
+
+- name: Creates directory lib docker
+  file:
+    path: /var/lib/docker
+    state: directory    
+    mode: 755
+    recurse: yes  

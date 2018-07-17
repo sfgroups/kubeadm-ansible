@@ -1,0 +1,19 @@
+---
+# vars file for provision-thinpool
+
+docker_provision_thinpool_partition_name: '{{docker_provision_thinpool_device_name}}1'
+docker_provision_thinpool_logical_volume_meta: '{{docker_provision_thinpool_logical_volume_name}}meta'
+
+docker_provision_thinpool_logical_volumes:
+  - volume_group_name: '{{docker_provision_thinpool_volume_group_name}}'
+    logical_volume_name: '{{docker_provision_thinpool_logical_volume_name}}'
+    logical_volume_size: '{{docker_provision_thinpool_logical_volume_data_size}}'
+  - volume_group_name: '{{docker_provision_thinpool_volume_group_name}}'
+    logical_volume_name: '{{docker_provision_thinpool_logical_volume_meta}}'
+    logical_volume_size: '{{docker_provision_thinpool_logical_volume_meta_size}}'
+
+docker_provision_thinpool_metadata_profile: '{{docker_provision_thinpool_volume_group_name}}-{{docker_provision_thinpool_logical_volume_name}}'
+
+docker_provision_thinpool_partition_layout_dest: '{{docker_provision_thinpool_partition_layout_dest_dir}}/{{docker_provision_thinpool_partition_layout | default("docker.layout")}}'
+
+docker_provision_thinpool_size: '{{ ((docker_provision_thinpool_size_gb*1024*1024*1024/docker_provision_thinpool_chuncksize_kb) - docker_provision_thinpool_partition_offset)| int }}'

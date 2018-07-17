@@ -1,0 +1,4 @@
+activation {
+    thin_pool_autoextend_threshold={{ docker_provision_thinpool_autoextend_threshold | default(80) }}
+    thin_pool_autoextend_percent={{ docker_provision_thinpool_autoextend_percent | default(20) }}
+}

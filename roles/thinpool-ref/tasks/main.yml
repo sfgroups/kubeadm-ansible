@@ -1,0 +1,10 @@
+---
+- name: check if the device has partition layout
+  become: true
+  become_user: root
+  command: sfdisk -d {{docker_provision_thinpool_device_name}}
+  register: partition_layout
+
+- name: run tasks to provision thinpool
+  when: partition_layout.stdout == ""
+  include: provision.yml
